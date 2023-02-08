@@ -1,0 +1,3 @@
+[workspace]
+
+members = ["weather", "weather-provider", "providers/*"]
