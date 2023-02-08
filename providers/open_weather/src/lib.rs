@@ -55,11 +55,14 @@ impl OpenWeatherMap {
 
         let mut resp = parse::<TodayResponse>(response).await?;
 
-        let weather = resp.weather.pop().ok_or(json_error(&endpoint, "weather"))?;
-        return Ok(Weather::current(
+        let weather = resp
+            .weather
+            .pop()
+            .ok_or_else(|| json_error(&endpoint, "weather"))?;
+        Ok(Weather::current(
             Temperature::from_k(resp.main.temp)?,
             weather.main,
-        ));
+        ))
     }
     async fn history(&self, address: &str, date: NaiveDate) -> Result<Weather, ProviderError> {
         let ts = NaiveDateTime::new(date, chrono::NaiveTime::default()).timestamp();
@@ -71,11 +74,14 @@ impl OpenWeatherMap {
             .await?;
 
         let mut resp = parse::<HistoryResponse>(response).await?;
-        let mut histroy = resp.list.pop().ok_or(json_error(&endpoint, "./list"))?;
+        let mut histroy = resp
+            .list
+            .pop()
+            .ok_or_else(|| json_error(&endpoint, "./list"))?;
         let weather = histroy
             .weather
             .pop()
-            .ok_or(json_error(&endpoint, "./list/[0]/weather"))?;
+            .ok_or_else(|| json_error(&endpoint, "./list/[0]/weather"))?;
         let temp = Temperature::from_k(histroy.main.temp)?;
         Ok(Weather::history(temp, weather.main))
     }
@@ -89,13 +95,16 @@ impl OpenWeatherMap {
             .await?;
 
         let mut resp = parse::<ForecastResponse>(response).await?;
-        let mut forecast = resp.list.pop().ok_or(json_error(&endpoint, "./list"))?;
+        let mut forecast = resp
+            .list
+            .pop()
+            .ok_or_else(|| json_error(&endpoint, "./list"))?;
         let temp = forecast.temp.day;
         let temp = Temperature::from_k(temp)?;
         let weather = forecast
             .weather
             .pop()
-            .ok_or(json_error(&endpoint, "./list/[0]/weather"))?;
+            .ok_or_else(|| json_error(&endpoint, "./list/[0]/weather"))?;
 
         Ok(Weather::forecast(temp, weather.main))
     }

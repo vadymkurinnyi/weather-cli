@@ -25,7 +25,7 @@ async fn handle(args: WeatherCliArgs) -> Result<WeatherCommandResult, Box<dyn Er
     let conf = Rc::new(conf);
     let conf_ref1 = Rc::clone(&conf);
     let conf_ref2 = Rc::clone(&conf);
-    let mut provider_manger = ProviderManagerBuilder::new()
+    let mut provider_manger = ProviderManagerBuilder::default()
         .add_provider_builder(open_weather::PROVIDER_NAME, move || {
             let open_weather = open_weather::OpenWeatherMap::new(&conf_ref1)?;
             Ok(Box::new(open_weather))

@@ -36,7 +36,7 @@ impl<'a> WeatherProviderManager<'a> {
         }
         Err(ProviderError::NotSupport(provider_name.to_string()))
     }
-    pub fn get_provider(&mut self, name: &str) -> Result<&Box<dyn WeatherProvider>, ProviderError> {
+    pub fn get_provider(&mut self, name: &str) -> Result<&dyn WeatherProvider, ProviderError> {
         let entry = self.providers.entry(name.to_string());
         let provider_ref = match entry {
             Entry::Occupied(e) => e.into_mut(),
@@ -49,6 +49,6 @@ impl<'a> WeatherProviderManager<'a> {
                 v.insert(provider)
             }
         };
-        Ok(provider_ref)
+        Ok(&**provider_ref)
     }
 }

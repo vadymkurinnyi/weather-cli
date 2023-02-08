@@ -8,7 +8,7 @@ pub fn result_to_user_output(result: WeatherCommandResult) {
     match result {
         WeatherCommandResult::Weather(args, weather) => {
             let temp = weather.temp.to_string_value(Units::Metric);
-            let date = args.date.unwrap_or(chrono::offset::Utc::now().date_naive());
+            let date = args.date.unwrap_or_else(|| chrono::offset::Utc::now().date_naive());
             let location = args.address;
             let condition = weather.condition;
             let weather = match weather.kind {
@@ -35,7 +35,7 @@ pub fn result_to_user_output(result: WeatherCommandResult) {
                 None => println!("{}", "Provider not set".red()),
             }
 
-            let line = std::iter::repeat("-").take(20).collect::<String>();
+            let line = "-".repeat(20);
             for (p, settings) in info.settings {
                 match settings {
                     None => {
@@ -61,19 +61,19 @@ pub fn error_to_user_output(error: Box<dyn Error + 'static>) {
         Ok(error) =>{
             let error = error.deref();
             match error {
-                ProviderError::NotSupport(_, ..)
-                | ProviderError::Temperature(_, ..)
-                | ProviderError::UnsupportedDate(_, ..)
-                | ProviderError::Parse(_, ..)
-                | ProviderError::Api(_, ..)
-                | ProviderError::MissingConf(_, ..) => output(error.to_string()),
-                ProviderError::Configuration(_, ..) => {
+                ProviderError::NotSupport(..)
+                | ProviderError::Temperature(..)
+                | ProviderError::UnsupportedDate(..)
+                | ProviderError::Parse(..)
+                | ProviderError::Api(..)
+                | ProviderError::MissingConf(..) => output(error.to_string()),
+                ProviderError::Configuration(..) => {
                     output("Error while reading provider configuration. Check the provider settings.")
                 }
-                ProviderError::JSON(_, ..) => output(format!(
+                ProviderError::JSON(..) => output(format!(
                     "Error, the provider may changed protocol. {error}"
                 )),
-                ProviderError::HttpClient(_, ..) => {
+                ProviderError::HttpClient(..) => {
                     output("Unexpected response from the provider. Might be a connection issue.")
                 }
             }

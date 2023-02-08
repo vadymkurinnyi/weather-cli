@@ -1,22 +1,16 @@
 use std::{collections::HashMap, error::Error};
 
 use crate::{ProviderError, WeatherProvider};
+use std::collections::hash_map::Entry;
+type ProviderBuilder =
+    Box<dyn FnOnce() -> Result<Box<dyn WeatherProvider + 'static>, Box<dyn Error>>>;
+#[derive(Default)]
 pub struct ProviderManagerBuilder {
     providers: HashMap<String, Box<dyn WeatherProvider>>,
-    builders: HashMap<
-        String,
-        Box<dyn FnOnce() -> Result<Box<dyn WeatherProvider + 'static>, Box<dyn Error>>>,
-    >,
+    builders: HashMap<String, ProviderBuilder>,
 }
 
 impl ProviderManagerBuilder {
-    pub fn new() -> Self {
-        ProviderManagerBuilder {
-            providers: HashMap::new(),
-            builders: HashMap::new(),
-        }
-    }
-
     pub fn add_provider<P>(mut self, name: impl Into<String>, provider: P) -> Self
     where
         P: WeatherProvider + 'static,
@@ -41,15 +35,12 @@ impl ProviderManagerBuilder {
 }
 pub struct ProviderManager {
     providers: HashMap<String, Box<dyn WeatherProvider>>,
-    builders: HashMap<
-        String,
-        Box<dyn FnOnce() -> Result<Box<dyn WeatherProvider + 'static>, Box<dyn Error>>>,
-    >,
+    builders: HashMap<String, ProviderBuilder>,
 }
 impl ProviderManager {
     pub fn get_list_providers(&self) -> Vec<&str> {
-        let mut list: Vec<&str> = self.providers.iter().map(|(key, _)| key.as_str()).collect();
-        list.extend(self.builders.iter().map(|(key, _)| key.as_str()));
+        let mut list: Vec<&str> = self.providers.keys().map(|key| key.as_str()).collect();
+        list.extend(self.builders.keys().map(|key| key.as_str()));
         list
     }
     pub fn is_supported(&self, provider_name: &str) -> Result<(), ProviderError> {
@@ -58,14 +49,11 @@ impl ProviderManager {
         }
         Err(ProviderError::NotSupport(provider_name.to_string()))
     }
-    pub fn get_provider(
-        &mut self,
-        name: &str,
-    ) -> Result<&Box<dyn WeatherProvider>, Box<dyn Error>> {
+    pub fn get_provider(&mut self, name: &str) -> Result<&dyn WeatherProvider, Box<dyn Error>> {
         let entry = self.providers.entry(name.to_string());
         let provider_ref = match entry {
-            std::collections::hash_map::Entry::Occupied(e) => e.into_mut(),
-            std::collections::hash_map::Entry::Vacant(v) => {
+            Entry::Occupied(e) => e.into_mut(),
+            Entry::Vacant(v) => {
                 let builder = self
                     .builders
                     .remove(name)
@@ -74,6 +62,6 @@ impl ProviderManager {
                 v.insert(provider)
             }
         };
-        Ok(provider_ref)
+        Ok(&**provider_ref)
     }
 }
