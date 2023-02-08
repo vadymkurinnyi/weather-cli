@@ -12,16 +12,16 @@ where
         return match json {
             Ok(json) => Ok(Ok(json)),
             Err(err) => {
-                println!("{:?}", err);
+                //todo log
                 Err(err)
             }
         };
     }
-    println!("err url: {}", res.url());
+
     match res.json::<E>().await {
         Ok(err_resp) => Ok(Err(err_resp)),
         Err(err) => {
-            println!("{:?}", err.url());
+            //todo log err.url()
             Err(err)
         }
     }

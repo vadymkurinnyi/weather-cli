@@ -1,15 +1,12 @@
 mod args;
 mod commands;
-mod error;
 mod settings;
 mod user_output;
 
 use args::{CliCommand, WeatherCliArgs};
 use clap::Parser;
 use config::Config;
-use error::WeatherError;
-pub use settings::*;
-use std::rc::Rc;
+use settings::*;
 use user_output::{error_to_user_output, result_to_user_output};
 use weather_provider::ProviderManagerBuilder;
 
@@ -22,7 +19,8 @@ async fn main() {
     };
 }
 use commands::WeatherCommandResult;
-async fn handle(args: WeatherCliArgs) -> Result<WeatherCommandResult, WeatherError> {
+use std::{error::Error, rc::Rc};
+async fn handle(args: WeatherCliArgs) -> Result<WeatherCommandResult, Box<dyn Error>> {
     let conf: Config = Settings::conf().await?;
     let conf = Rc::new(conf);
     let conf_clone = Rc::clone(&conf);
@@ -41,14 +39,3 @@ async fn handle(args: WeatherCliArgs) -> Result<WeatherCommandResult, WeatherErr
     };
     Ok(res)
 }
-
-// fn test() {
-//     let result: Result<T, Box<dyn std::error::Error>> = some_function();
-//     match result {
-//         Ok(val) => { /* handle success */ }
-//         Err(e) => match e.downcast::<WeatherError>() {
-//             Ok(my_error) => { /* handle MyErrorType */ }
-//             Err(_) => { /* handle other errors */ }
-//         },
-//     }
-// }

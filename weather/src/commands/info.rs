@@ -1,6 +1,5 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, error::Error};
 
-use crate::error::WeatherError;
 use config::Config;
 use weather_provider::ProviderManager;
 
@@ -9,7 +8,7 @@ use super::WeatherCommandResult;
 pub async fn execute(
     provider_manger: &mut ProviderManager,
     cfg: &Config,
-) -> Result<WeatherCommandResult, WeatherError> {
+) -> Result<WeatherCommandResult, Box<dyn Error>> {
     let providers = provider_manger.get_list_providers();
 
     let mut settings = Vec::new();

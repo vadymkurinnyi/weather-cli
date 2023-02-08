@@ -1,6 +1,8 @@
+use std::{error::Error, ops::Deref};
+
 use weather_provider::{ProviderError, Units, WeatherKind};
 use colored::Colorize;
-use crate::{commands::WeatherCommandResult, error::WeatherError};
+use crate::{commands::WeatherCommandResult, SettingsError};
 
 pub fn result_to_user_output(result: WeatherCommandResult) {
     match result {
@@ -30,7 +32,6 @@ pub fn result_to_user_output(result: WeatherCommandResult) {
                 None => println!("{}", "Provider not set".red()),
             }
 
-
             let line = std::iter::repeat("-").take(20).collect::<String>();
             for (p, settings) in info.settings {
                 match settings {
@@ -38,6 +39,7 @@ pub fn result_to_user_output(result: WeatherCommandResult) {
                         println!("Settings for provider '{}' is empty.", p)
                     },
                     Some(settings) => {
+                        println!("{} settings: ", p);
                         for (field, value) in settings {
                             println!("{}: {}", field.white(), value.green() )
                         }
@@ -45,37 +47,43 @@ pub fn result_to_user_output(result: WeatherCommandResult) {
                     
                 }
                 println!("{}", line);
-                
             }
         },
     }
 }
 
-pub fn error_to_user_output(error: WeatherError) {
-    match error {
-        WeatherError::Provider(provider_err) => {
-            match provider_err {
+pub fn error_to_user_output(error: Box<dyn Error + 'static>) {
+
+    match error.downcast::<ProviderError>() {
+        Ok(error) =>{
+            let error = error.deref();
+            match error {
                 ProviderError::NotSupport(_, ..)
                 | ProviderError::Temperature(_, ..)
                 | ProviderError::UnsupportedDate(_, ..)
                 | ProviderError::Parse(_, ..)
                 | ProviderError::Api(_, ..)
-                | ProviderError::MissingConf(_, ..) => output(provider_err.to_string()),
-
+                | ProviderError::MissingConf(_, ..) => output(error.to_string()),
                 ProviderError::Configuration(_, ..) => {
                     output("Error while provider reading configuration. Try to reset the settings.")
                 }
                 ProviderError::JSON(_, ..) => output(format!(
-                    "Error, the provider may changed protocol. {provider_err}"
+                    "Error, the provider may changed protocol. {error}"
                 )),
                 ProviderError::HttpClient(_, ..) => {
                     output("Unexpected response from the provider. Might be a connection issue.")
                 }
-            };
-        }
-        WeatherError::Settings(settings_err) => output(settings_err.to_string()),
-        // WeatherError::Unexpected(_) => todo!(),
+            }
+        },
+        Err(e) => {
+            match e.downcast::<SettingsError>() {
+                Ok(settings_err) => output(settings_err.to_string()),
+                Err(e) => println!("{:?},", e)}
+            }
+            
     }
+
+    
 }
 
 fn output(message: impl Into<String>) {

@@ -8,7 +8,7 @@ use tokio::{
 };
 pub const APP_NAME: &str = "weather";
 
-pub struct Settings {}
+pub struct Settings;
 impl Settings {
     pub async fn conf() -> Result<Config, SettingsError> {
         let congif_path = get_conf_path().await;
@@ -32,7 +32,6 @@ impl Settings {
             serde_json::from_str(&file_contents).map_err(|_| SettingsError::Damaged)?;
         let str_val = serde_json::to_string(val).map_err(|_| SettingsError::Input)?;
         let val: Value = serde_json::from_str(&str_val).map_err(|_| SettingsError::Input)?;
-        dbg!(&config);
 
         let mut paths: Vec<&str> = path.split('/').collect();
         let last = paths.pop().ok_or(SettingsError::Path(path.to_string()))?;
@@ -71,7 +70,6 @@ async fn get_conf_path() -> PathBuf {
 }
 
 use thiserror::Error;
-
 #[derive(Error, Debug)]
 pub enum SettingsError {
     #[error("Not valid settings name {0}")]
