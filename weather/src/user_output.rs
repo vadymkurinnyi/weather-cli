@@ -26,6 +26,9 @@ pub fn result_to_user_output(result: WeatherCommandResult) {
         }
         WeatherCommandResult::SettingsApplied => println!("The changes was applied.")
         ,
+        WeatherCommandResult::Reseted => {
+            println!("The settings were reset to default.")
+        },
         WeatherCommandResult::Info(info) => {
             match info.provider {
                 Some(current) => println!("Current provider: {}", current.green()),
@@ -65,7 +68,7 @@ pub fn error_to_user_output(error: Box<dyn Error + 'static>) {
                 | ProviderError::Api(_, ..)
                 | ProviderError::MissingConf(_, ..) => output(error.to_string()),
                 ProviderError::Configuration(_, ..) => {
-                    output("Error while provider reading configuration. Try to reset the settings.")
+                    output("Error while reading provider configuration. Check the provider settings.")
                 }
                 ProviderError::JSON(_, ..) => output(format!(
                     "Error, the provider may changed protocol. {error}"

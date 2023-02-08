@@ -23,18 +23,22 @@ use std::{error::Error, rc::Rc};
 async fn handle(args: WeatherCliArgs) -> Result<WeatherCommandResult, Box<dyn Error>> {
     let conf: Config = Settings::conf().await?;
     let conf = Rc::new(conf);
-    let conf_clone = Rc::clone(&conf);
-    let open_weather = open_weather::OpenWeatherMap::new(&conf)?;
+    let conf_ref1 = Rc::clone(&conf);
+    let conf_ref2 = Rc::clone(&conf);
     let mut provider_manger = ProviderManagerBuilder::new()
-        .add_provider(open_weather::PROVIDER_NAME, open_weather)
+        .add_provider_builder(open_weather::PROVIDER_NAME, move || {
+            let open_weather = open_weather::OpenWeatherMap::new(&conf_ref1)?;
+            Ok(Box::new(open_weather))
+        })
         .add_provider_builder(weather_api::PROVIDER_NAME, move || {
-            let weather_api = weather_api::WeatherApiBuilder::build(&conf_clone)?;
+            let weather_api = weather_api::WeatherApiBuilder::build(&conf_ref2)?;
             Ok(Box::new(weather_api))
         })
         .build();
     let res = match args.command {
         CliCommand::Configure(args) => commands::configure::execute(args, &provider_manger).await?,
         CliCommand::Get(args) => commands::get::execute(args, &mut provider_manger, &conf).await?,
+        CliCommand::Reset => commands::reset::execute().await?,
         CliCommand::Info => commands::info::execute(&mut provider_manger, &conf).await?,
     };
     Ok(res)

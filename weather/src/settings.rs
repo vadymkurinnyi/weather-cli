@@ -13,8 +13,7 @@ impl Settings {
     pub async fn conf() -> Result<Config, SettingsError> {
         let congif_path = get_conf_path().await;
         if !congif_path.exists() {
-            let mut file = File::create(congif_path.as_path()).await?;
-            file.write_all("{}".as_bytes()).await?;
+            reset_json_file(congif_path.clone()).await?;
         }
         let conf = Config::builder()
             .add_source(config::File::from(congif_path))
@@ -54,6 +53,16 @@ impl Settings {
             .await?;
         Ok(())
     }
+    pub async fn reset() -> Result<(), SettingsError> {
+        let congif_path = get_conf_path().await;
+        reset_json_file(congif_path).await
+    }
+}
+
+async fn reset_json_file(congif_path: PathBuf) -> Result<(), SettingsError> {
+    let mut file = File::create(congif_path.as_path()).await?;
+    file.write_all("{}".as_bytes()).await?;
+    Ok(())
 }
 
 use directories::ProjectDirs;

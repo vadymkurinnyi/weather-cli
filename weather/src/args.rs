@@ -16,6 +16,7 @@ pub enum CliCommand {
     Configure(ConfigureArgs),
     Get(GetWeatherArgs),
     Info,
+    Reset,
 }
 
 #[derive(Debug, Args)]
