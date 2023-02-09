@@ -11,7 +11,7 @@ pub fn result_to_user_output(result: WeatherCommandResult) {
             let date = args.date.unwrap_or_else(|| chrono::offset::Utc::now().date_naive());
             let location = args.address;
             let condition = weather.condition;
-            let weather = match weather.kind {
+            let weather_message = match weather.kind {
                 WeatherKind::History => format!(
                     "On {date}, the weather in {location} was {condition} with temperature of {temp}."),
                 WeatherKind::Current => 
@@ -19,7 +19,7 @@ pub fn result_to_user_output(result: WeatherCommandResult) {
                 WeatherKind::Forecast => 
                     format!("The forecast for {location} for {date} is {condition} with a predicted high temperature of {temp}."),
             };
-            println!("{}", weather);  
+            println!("{}", weather_message);  
         }
         WeatherCommandResult::ProviderChanged(provider) => {
             println!("Weather provider changed to: '{}'.", provider)
@@ -31,64 +31,45 @@ pub fn result_to_user_output(result: WeatherCommandResult) {
         },
         WeatherCommandResult::Info(info) => {
             match info.provider {
-                Some(current) => println!("Current provider: {}", current.green()),
-                None => println!("{}", "Provider not set".red()),
+                Some(current) => println!("Current provider: {}", current.green().bold()),
+                None => println!("{}", "Provider not set".red().bold()),
             }
 
-            let line = "-".repeat(20);
-            for (p, settings) in info.settings {
-                match settings {
-                    None => {
-                        println!("Settings for provider '{}' is empty.", p)
-                    },
-                    Some(settings) => {
-                        println!("{} settings: ", p);
-                        for (field, value) in settings {
-                            println!("{}: {}", field.white(), value.green() )
-                        }
-                    },
-                    
+            let separator = "-".repeat(40);
+        for (p, settings) in info.settings {
+            println!("\n{}", separator);
+            println!("Settings for provider '{}':", p.bold());
+
+            match settings {
+                None => println!("{}", "No settings found".red().bold()),
+                Some(settings) => {
+                    for (field, value) in settings {
+                        println!("{}: {}", field.white().bold(), value.green().bold());
+                    }
                 }
-                println!("{}", line);
             }
+        }
         },
     }
 }
 
 pub fn error_to_user_output(error: Box<dyn Error + 'static>) {
-
-    match error.downcast::<ProviderError>() {
-        Ok(error) =>{
-            let error = error.deref();
-            match error {
-                ProviderError::NotSupport(..)
-                | ProviderError::Temperature(..)
-                | ProviderError::UnsupportedDate(..)
-                | ProviderError::Parse(..)
-                | ProviderError::Api(..)
-                | ProviderError::MissingConf(..) => output(error.to_string()),
-                ProviderError::Configuration(..) => {
-                    output("Error while reading provider configuration. Check the provider settings.")
-                }
-                ProviderError::JSON(..) => output(format!(
-                    "Error, the provider may changed protocol. {error}"
-                )),
-                ProviderError::HttpClient(..) => {
-                    output("Unexpected response from the provider. Might be a connection issue.")
-                }
-            }
+    let message = match error.downcast::<ProviderError>() {
+        Ok(error) => match error.deref() {
+            ProviderError::NotSupport(..)
+            | ProviderError::Temperature(..)
+            | ProviderError::UnsupportedDate(..)
+            | ProviderError::Parse(..)
+            | ProviderError::Api(..)
+            | ProviderError::MissingConf(..) => error.to_string(),
+            ProviderError::Configuration(..) => "Error while reading provider configuration. Check the provider settings.".to_owned(),
+            ProviderError::JSON(..) => format!("Error, the provider may changed protocol. {}", error),
+            ProviderError::HttpClient(..) => "Unexpected response from the provider. Might be a connection issue.".to_owned(),
         },
-        Err(e) => {
-            match e.downcast::<SettingsError>() {
-                Ok(settings_err) => output(settings_err.to_string()),
-                Err(e) => println!("{:?},", e)}
-            }
-            
-    }
-
-    
-}
-
-fn output(message: impl Into<String>) {
-    println!("{}", message.into().red());
+        Err(e) => match e.downcast::<SettingsError>() {
+            Ok(settings_err) => settings_err.to_string(),
+            Err(e) => format!("{:?}", e),
+        },
+    };
+    println!("{}", message.red());
 }

@@ -8,8 +8,15 @@ use tokio::{
 };
 pub const APP_NAME: &str = "weather";
 
+/// This struct contains the functions fro settings of the application.
 pub struct Settings;
 impl Settings {
+    /// Returns the configuration of the application.
+    ///
+    /// # Errors
+    ///
+    /// This function will return a `SettingsError` if there was an error reading or constructing the
+    /// configuration file.
     pub async fn conf() -> Result<Config, SettingsError> {
         let congif_path = get_conf_path().await;
         if !congif_path.exists() {
@@ -21,6 +28,23 @@ impl Settings {
             .expect("Configuration has to be constructed.");
         Ok(conf)
     }
+    /// Sets a new value for a specified path in the configuration.
+    ///
+    /// # Errors
+    ///
+    /// This function will return a `SettingsError` if there was an error reading or writing to the
+    /// configuration file, or if the input value is not serializable to JSON.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use settings::Settings;
+    ///
+    /// let path = "myProvider/baseUrl";
+    /// let val = "https://127.0.0.1:8080";
+    /// let result = Settings::set(path, val).await;
+    /// ```
+    #[cfg(not(doctest))]
     pub async fn set<T>(path: &str, val: &T) -> Result<(), SettingsError>
     where
         T: Sized + Serialize,
@@ -59,6 +83,7 @@ impl Settings {
     }
 }
 
+/// `reset` resets the configuration file to its default values.
 async fn reset_json_file(congif_path: PathBuf) -> Result<(), SettingsError> {
     let mut file = File::create(congif_path.as_path()).await?;
     file.write_all("{}".as_bytes()).await?;
@@ -79,6 +104,7 @@ async fn get_conf_path() -> PathBuf {
 }
 
 use thiserror::Error;
+/// This enum `SettingsError` defines all the errors that can occur when working with the settings.
 #[derive(Error, Debug)]
 pub enum SettingsError {
     #[error("Not valid settings name {0}")]

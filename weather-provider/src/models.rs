@@ -1,10 +1,14 @@
+use thiserror::Error;
+
 #[derive(Debug)]
+/// Struct that contains information about the weather at a certain point in time.
 pub struct Weather {
     pub kind: WeatherKind,
     pub temp: Temperature,
     pub condition: String,
 }
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
+/// Enum that contains the different kinds of weather information available.
 pub enum WeatherKind {
     History,
     Current,
@@ -12,19 +16,22 @@ pub enum WeatherKind {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+/// Enum that represents a temperature in different scales.
 pub enum Temperature {
     Kelvin(f32),
     Celsius(f32),
     Fahrenheit(f32),
 }
 #[derive(Debug, Clone, Copy)]
+/// Enum that contains different temperature unit scales.
 pub enum Units {
+    /// Fahrenheit temperature unit scale.
     Imperial,
+    /// Celsius temperature unit scale.
     Metric,
+    /// Kelvin temperature unit scale.
     SI,
 }
-
-use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum TemperatureError {
@@ -36,28 +43,61 @@ pub enum TemperatureError {
     Fahrenheit(f32),
 }
 
+/// Constant that represents 0°C in Kelvin.
 static K_ZERO_C: f32 = 273.15;
+/// Constant that represents 0°F in Kelvin.
 static K_ZERO_F: f32 = 459.67;
+/// Constant that represents 0°C in Kelvin.
 type TemperatureResult = Result<Temperature, TemperatureError>;
+
 impl Temperature {
+    /// Creates a `Temperature` instance from a Celsius value.
+    /// 
+    /// Returns a `TemperatureError` if the temperature value is less than -273.15°C.
     pub fn from_c(celsius: f32) -> TemperatureResult {
         if celsius < -K_ZERO_C {
             return Err(TemperatureError::Celsius(celsius));
         }
         Ok(Temperature::Celsius(celsius))
     }
+    /// Creates a `Temperature` instance from a Fahrenheit value.
+    /// 
+    /// Returns a `TemperatureError` if the temperature value is less than -459.67°F.
     pub fn from_f(fahrenheit: f32) -> TemperatureResult {
         if fahrenheit < -K_ZERO_F {
             return Err(TemperatureError::Fahrenheit(fahrenheit));
         }
         Ok(Temperature::Fahrenheit(fahrenheit))
     }
+    /// Creates a `Temperature` instance from a Kelvin value.
+    /// 
+    /// Returns a `TemperatureError` if the temperature value is less than 0°K.
     pub fn from_k(kelvin: f32) -> TemperatureResult {
         if kelvin < 0.0 {
             return Err(TemperatureError::Kelvin(kelvin));
         }
         Ok(Temperature::Kelvin(kelvin))
     }
+    /// Converts the temperature value to a string representation based on the desired units.
+    ///
+    /// # Arguments
+    ///
+    /// * `units` - The units to use for the string representation of the temperature.
+    ///
+    /// # Returns
+    ///
+    /// A string representation of the temperature in the desired units.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use weather_provider::{Temperature, Units};
+    ///
+    /// let temperature = Temperature::Kelvin(273.15);
+    /// let string_value = temperature.to_string_value(Units::Metric);
+    ///
+    /// assert_eq!(string_value, "0.0°C");
+    /// ```
     pub fn to_string_value(self, units: Units) -> String {
         match self {
             Temperature::Kelvin(k) => match units {
@@ -101,6 +141,18 @@ impl Temperature {
     }
 }
 impl Weather {
+    /// Creates a new `Weather` instance with type `WeatherKind::History` and specified temperature and weather condition.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use weather_provider::{Temperature, Units, Weather, WeatherKind};
+    /// let temp = Temperature::from_c(22.0).unwrap();
+    /// let weather = Weather::history(temp, "Sunny");
+    /// assert_eq!(weather.kind, WeatherKind::History);
+    /// assert_eq!(weather.temp.to_string_value(Units::Metric), "22.0°C");
+    /// assert_eq!(weather.condition, "Sunny");
+    /// ```
     pub fn history(temp: Temperature, condition: impl Into<String>) -> Self {
         Self {
             kind: WeatherKind::History,
@@ -108,6 +160,18 @@ impl Weather {
             condition: condition.into(),
         }
     }
+    /// Creates a new `Weather` instance with type `WeatherKind::Current` and specified temperature and weather condition.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use weather_provider::{Temperature, Units, Weather, WeatherKind};
+    /// let temp = Temperature::from_c(22.0).unwrap();
+    /// let weather = Weather::current(temp, "Sunny");
+    /// assert_eq!(weather.kind, WeatherKind::Current);
+    /// assert_eq!(weather.temp.to_string_value(Units::Metric), "22.0°C");
+    /// assert_eq!(weather.condition, "Sunny");
+    /// ```
     pub fn current(temp: Temperature, condition: impl Into<String>) -> Self {
         Self {
             kind: WeatherKind::Current,
@@ -115,6 +179,18 @@ impl Weather {
             condition: condition.into(),
         }
     }
+    /// Creates a new `Weather` instance with type `WeatherKind::Forecast` and specified temperature and weather condition.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use weather_provider::{Temperature, Units, Weather, WeatherKind};
+    /// let temp = Temperature::from_c(22.0).unwrap();
+    /// let weather = Weather::forecast(temp, "Sunny");
+    /// assert_eq!(weather.kind, WeatherKind::Forecast);
+    /// assert_eq!(weather.temp.to_string_value(Units::Metric), "22.0°C");
+    /// assert_eq!(weather.condition, "Sunny");
+    /// ```
     pub fn forecast(temp: Temperature, condition: impl Into<String>) -> Self {
         Self {
             kind: WeatherKind::Forecast,

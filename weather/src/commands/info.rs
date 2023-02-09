@@ -5,6 +5,20 @@ use weather_provider::ProviderManager;
 
 use super::WeatherCommandResult;
 
+/// The execute function is used to retrieve the current configuration information for all available weather providers.
+///
+/// # Arguments
+///
+/// * `provider_manger` - An instance of `ProviderManager` that provides the list of providers and their configurations
+/// * `cfg` - An instance of `Config` that holds the configuration for the weather providers
+///
+/// # Returns
+///
+/// A `Result` that wraps the `WeatherCommandResult` for the Info command.
+///
+/// # Errors
+///
+/// An error will be returned if there is a failure in accessing the configurations for the providers
 pub async fn execute(
     provider_manger: &mut ProviderManager,
     cfg: &Config,
@@ -32,6 +46,12 @@ pub async fn execute(
     Ok(WeatherCommandResult::Info(info))
 }
 
+/// Holds the configuration information for the weather providers
+///
+/// # Fields
+///
+/// * `provider` - A `String` that holds the name of the current provider being used.
+/// * `settings` - A `Vec` of `(String, Option<HashMap<String, String>>)` tuples, where each tuple represents a weather provider and its configuration, if any.
 pub struct Info {
     pub provider: Option<String>,
     pub settings: Vec<(String, Option<HashMap<String, String>>)>,

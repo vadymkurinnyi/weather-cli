@@ -1,6 +1,7 @@
 use chrono::NaiveDate;
 use clap::{Args, Parser, Subcommand};
 
+/// Weather command line interface (CLI) arguments.
 #[derive(Parser, Debug)]
 #[command(name = "Weather")]
 #[command(author = "Vadym K. <vadym.kruinnyi@gmail.com>")]
@@ -11,6 +12,7 @@ pub struct WeatherCliArgs {
     pub command: CliCommand,
 }
 
+/// An enumeration of the different sub-commands available for the weather CLI.
 #[derive(Debug, Subcommand)]
 pub enum CliCommand {
     Configure(ConfigureArgs),
@@ -19,6 +21,7 @@ pub enum CliCommand {
     Reset,
 }
 
+/// Arguments for the `configure` sub-command.
 #[derive(Debug, Args)]
 pub struct ConfigureArgs {
     pub provider: String,
@@ -26,6 +29,7 @@ pub struct ConfigureArgs {
     pub value: Option<String>,
 }
 
+/// Arguments for the `get` sub-command.
 #[derive(Debug, Args)]
 pub struct GetWeatherArgs {
     #[arg()]
