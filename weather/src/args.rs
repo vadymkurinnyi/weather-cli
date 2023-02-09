@@ -17,22 +17,28 @@ pub struct WeatherCliArgs {
 pub enum CliCommand {
     Configure(ConfigureArgs),
     Get(GetWeatherArgs),
+    ///Retrieve the current configuration information for all available weather providers
     Info,
+    ///Resets the settings of the application to its default values.
     Reset,
 }
 
-/// Arguments for the `configure` sub-command.
+/// Configuration arguments for the weather CLI
 #[derive(Debug, Args)]
 pub struct ConfigureArgs {
+    /// The name of the desired weather provider
     pub provider: String,
+    /// The key for the desired setting, for example: apiKey
     pub key: Option<String>,
+    /// The value for the specified setting key
     pub value: Option<String>,
 }
 
-/// Arguments for the `get` sub-command.
+/// Retrieve the weather information
 #[derive(Debug, Args)]
 pub struct GetWeatherArgs {
-    #[arg()]
+    /// A string containing the location's address    
     pub address: String,
+    /// An optional NaiveDate representing the date to retrieve the weather information for
     pub date: Option<NaiveDate>,
 }
