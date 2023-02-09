@@ -2,6 +2,8 @@ pub mod api_config;
 pub mod builder;
 pub mod protocol;
 
+use std::error::Error;
+
 pub use api_config::PROVIDER_NAME;
 use chrono::NaiveDate;
 use protocol::*;
@@ -24,6 +26,15 @@ impl WeatherProvider for WeatherApi {
         &self,
         address: &str,
         date: Option<chrono::NaiveDate>,
+    ) -> Result<Weather, Box<dyn Error>> {
+        Ok(Self::get_weather(self, address, date).await?)
+    }
+}
+impl WeatherApi {
+    async fn get_weather(
+        &self,
+        address: &str,
+        date: Option<chrono::NaiveDate>,
     ) -> Result<Weather, ProviderError> {
         if let Some(date) = date {
             let today = chrono::offset::Utc::now().date_naive();
@@ -39,8 +50,6 @@ impl WeatherProvider for WeatherApi {
         }
         self.current(address).await
     }
-}
-impl WeatherApi {
     async fn current(&self, address: &str) -> Result<Weather, ProviderError> {
         let endpoint = self.endpoints.current.clone();
         let response = self

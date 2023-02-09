@@ -2,6 +2,8 @@ mod builder;
 mod error;
 mod models;
 pub mod utils;
+use std::error::Error;
+
 pub use builder::*;
 use chrono::NaiveDate;
 pub use error::*;
@@ -25,5 +27,5 @@ pub trait WeatherProvider {
         &self,
         address: &str,
         date: Option<NaiveDate>,
-    ) -> Result<Weather, ProviderError>;
+    ) -> Result<Weather, Box<dyn Error>>;
 }

@@ -1,6 +1,8 @@
 mod api_config;
 mod protocol;
 
+use std::error::Error;
+
 use self::api_config::Endpoints;
 pub use api_config::PROVIDER_NAME;
 use chrono::{NaiveDate, NaiveDateTime};
@@ -23,6 +25,15 @@ impl WeatherProvider for OpenWeatherMap {
     async fn get_weather(
         &self,
         address: &str,
+        date: Option<chrono::NaiveDate>,
+    ) -> Result<Weather, Box<dyn Error>> {
+        Ok(Self::get_weather(self, address, date).await?)
+    }
+}
+impl OpenWeatherMap {
+    async fn get_weather(
+        &self,
+        address: &str,
         date: Option<NaiveDate>,
     ) -> Result<Weather, ProviderError> {
         if let Some(date) = date {
@@ -38,8 +49,6 @@ impl WeatherProvider for OpenWeatherMap {
         }
         self.today(address).await
     }
-}
-impl OpenWeatherMap {
     fn default_request_builder(&self, endpoint: &Url, address: &str) -> reqwest::RequestBuilder {
         self.client
             .get(endpoint.clone())
