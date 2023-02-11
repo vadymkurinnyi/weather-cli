@@ -1,9 +1,8 @@
-use crate::{args::GetWeatherArgs, SettingsError};
-use config::Config;
-use std::error::Error;
-use weather_provider::ProviderManager;
-
 use super::WeatherCommandResult;
+use crate::{args::GetWeatherArgs, AppError, SettingsError};
+use anyhow::anyhow;
+use config::Config;
+use weather_abstractions::ProviderManager;
 
 /// Retrieve the weather information based on the given command arguments and the current settings
 ///
@@ -30,12 +29,15 @@ pub async fn execute(
     args: GetWeatherArgs,
     provider_manger: &mut ProviderManager,
     cfg: &Config,
-) -> Result<WeatherCommandResult, Box<dyn Error>> {
+) -> Result<WeatherCommandResult, AppError> {
     let provider_name: String = cfg
         .get_string("provider")
         .map_err(|_| SettingsError::ProviderNotSet)?;
     let provider = provider_manger.get_provider(&provider_name)?;
 
-    let weather = provider.get_weather(&args.address, args.date).await?;
+    let weather = provider
+        .get_weather(&args.address, args.date)
+        .await
+        .map_err(|e| AppError::Provider(anyhow!(e)))?;
     Ok(WeatherCommandResult::Weather(args, weather))
 }

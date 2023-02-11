@@ -1,9 +1,15 @@
 use std::{collections::HashMap, error::Error};
 
-use crate::{ProviderError, WeatherProvider};
+use crate::Error as ProviderError;
+use crate::WeatherProvider;
+use anyhow::anyhow;
 use std::collections::hash_map::Entry;
-type ProviderBuilder =
-    Box<dyn FnOnce() -> Result<Box<dyn WeatherProvider + 'static>, Box<dyn Error>>>;
+type ProviderBuilder = Box<
+    dyn FnOnce() -> Result<
+        Box<dyn WeatherProvider + 'static>,
+        Box<dyn Error + Send + Sync + 'static>,
+    >,
+>;
 
 /// The `ProviderManagerBuilder` struct is used to build the `ProviderManager`.
 /// It holds a HashMap of weather provider instances and a HashMap of functions to build weather provider instances.
@@ -50,7 +56,10 @@ impl ProviderManagerBuilder {
     #[cfg(not(doctest))]
     pub fn add_provider_builder<B>(mut self, name: impl Into<String>, builder: B) -> Self
     where
-        B: FnOnce() -> Result<Box<dyn WeatherProvider + 'static>, Box<dyn Error>> + 'static,
+        B: FnOnce() -> Result<
+                Box<dyn WeatherProvider + 'static>,
+                Box<dyn Error + Send + Sync + 'static>,
+            > + 'static,
     {
         self.builders.insert(name.into(), Box::new(builder));
         self
@@ -87,7 +96,7 @@ impl ProviderManager {
         list
     }
     /// This method checks if a provider with the given `provider_name` is supported by the `ProviderManager`.
-    /// It returns an `Ok` result with an unit if the provider is supported and a `ProviderError::NotSupport` error if not.
+    /// It returns an `Ok` result with an unit if the provider is supported and a `Error::NotSupport` error if not.
     pub fn is_supported(&self, provider_name: &str) -> Result<(), ProviderError> {
         if self.providers.contains_key(provider_name) || self.builders.contains_key(provider_name) {
             return Ok(());
@@ -95,8 +104,8 @@ impl ProviderManager {
         Err(ProviderError::NotSupport(provider_name.to_string()))
     }
     /// This method returns a reference to the provider with the given `name` if it exists, either as a pre-existing provider or as a newly built one.
-    /// If the provider does not exist in either the `providers` or `builders` `HashMap`, it returns a `ProviderError::NotSupport` error.
-    pub fn get_provider(&mut self, name: &str) -> Result<&dyn WeatherProvider, Box<dyn Error>> {
+    /// If the provider does not exist in either the `providers` or `builders` `HashMap`, it returns a `Error::NotSupport` error.
+    pub fn get_provider(&mut self, name: &str) -> Result<&dyn WeatherProvider, ProviderError> {
         let entry = self.providers.entry(name.to_string());
         let provider_ref = match entry {
             Entry::Occupied(e) => e.into_mut(),
@@ -105,7 +114,8 @@ impl ProviderManager {
                     .builders
                     .remove(name)
                     .ok_or(ProviderError::NotSupport(name.to_string()))?;
-                let provider = (builder)()?;
+                let provider =
+                    (builder)().map_err(|e| ProviderError::Build(name.to_string(), anyhow!(e)))?;
                 v.insert(provider)
             }
         };

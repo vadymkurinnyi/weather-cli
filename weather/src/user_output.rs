@@ -1,10 +1,8 @@
-use std::{error::Error, ops::Deref};
-
-use weather_provider::{ProviderError, Units, WeatherKind};
+use weather_abstractions::{ Units, WeatherKind };
 use colored::Colorize;
-use crate::{commands::WeatherCommandResult, SettingsError};
+use crate::commands::WeatherCommandResult;
 
-pub fn result_to_user_output(result: WeatherCommandResult) {
+pub fn print(result: WeatherCommandResult) {
     match result {
         WeatherCommandResult::Weather(args, weather) => {
             let temp = weather.temp.to_string_value(Units::Metric);
@@ -51,25 +49,4 @@ pub fn result_to_user_output(result: WeatherCommandResult) {
         }
         },
     }
-}
-
-pub fn error_to_user_output(error: Box<dyn Error + 'static>) {
-    let message = match error.downcast::<ProviderError>() {
-        Ok(error) => match error.deref() {
-            ProviderError::NotSupport(..)
-            | ProviderError::Temperature(..)
-            | ProviderError::UnsupportedDate(..)
-            | ProviderError::Parse(..)
-            | ProviderError::Api(..)
-            | ProviderError::MissingConf(..) => error.to_string(),
-            ProviderError::Configuration(..) => "Error while reading provider configuration. Check the provider settings.".to_owned(),
-            ProviderError::JSON(..) => format!("Error, the provider may changed protocol. {}", error),
-            ProviderError::HttpClient(..) => "Unexpected response from the provider. Might be a connection issue.".to_owned(),
-        },
-        Err(e) => match e.downcast::<SettingsError>() {
-            Ok(settings_err) => settings_err.to_string(),
-            Err(e) => format!("{:?}", e),
-        },
-    };
-    println!("{}", message.red());
 }

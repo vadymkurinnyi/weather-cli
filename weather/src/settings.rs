@@ -121,4 +121,6 @@ pub enum SettingsError {
     Damaged,
     #[error("Provider not set. Please configure the provider")]
     ProviderNotSet,
+    #[error("Configuration error")]
+    Configuration(#[from] config::ConfigError),
 }

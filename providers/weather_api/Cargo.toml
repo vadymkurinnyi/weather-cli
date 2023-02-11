@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-weather-provider = { path = "../../weather-provider" }
+weather-abstractions = { path = "../../weather-abstractions" }
 async-trait = "0.1.64"
 async-std = { version = "1.12.0", features = ["attributes"] }
 chrono = "0.4.23"
@@ -17,3 +17,6 @@ url = "2.3.1"
 tokio = { version = "1.25.0", features = ["macros"] }
 rstest = "0.16.0"
 config = "0.13.3"
+reqwest-middleware = "0.2.0"
+reqwest-retry = "0.2.1"
+reqwest-tracing = "0.4.0"

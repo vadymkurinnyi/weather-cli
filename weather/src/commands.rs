@@ -2,7 +2,7 @@ pub mod configure;
 pub mod get;
 pub mod info;
 pub mod reset;
-use weather_provider::Weather;
+use weather_abstractions::Weather;
 
 use self::info::Info;
 use crate::args::GetWeatherArgs;

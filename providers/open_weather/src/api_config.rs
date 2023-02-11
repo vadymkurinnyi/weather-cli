@@ -1,9 +1,13 @@
+use std::error::Error;
+
+use crate::error::OpenWeatherError;
+
 use super::OpenWeatherMap;
 use config::Config;
 use reqwest::{Client, Url};
 use serde::{Deserialize, Serialize};
-use weather_provider::utils::*;
-use weather_provider::*;
+use weather_abstractions::utils::*;
+use weather_abstractions::*;
 
 pub const PROVIDER_NAME: &str = "open-weather";
 
@@ -37,17 +41,17 @@ pub struct Endpoints {
 }
 
 impl TryFrom<ApiConfig> for Endpoints {
-    type Error = ProviderError;
+    type Error = OpenWeatherError;
     fn try_from(value: ApiConfig) -> Result<Self, Self::Error> {
         let base_url = Url::parse(&value.base_url).map_err(|e| {
-            ProviderError::Parse(
+            OpenWeatherError::Parse(
                 format!("{PROVIDER_NAME}/baseUrl"),
                 value.base_url.clone(),
                 e.to_string(),
             )
         })?;
         let history_base_url = Url::parse(&value.history_base_url).map_err(|e| {
-            ProviderError::Parse(
+            OpenWeatherError::Parse(
                 format!("{PROVIDER_NAME}/historyBaseUrl"),
                 value.base_url.clone(),
                 e.to_string(),
@@ -62,12 +66,15 @@ impl TryFrom<ApiConfig> for Endpoints {
 }
 
 impl OpenWeatherMap {
-    pub fn new(cfg: &Config) -> Result<OpenWeatherMap, ProviderError> {
+    pub fn new(cfg: &Config) -> Result<OpenWeatherMap, Box<dyn Error + Send + Sync>> {
         let api_conf: ApiConfig = cfg.get(PROVIDER_NAME)?;
-        let api_key = api_conf.api_key.clone().ok_or(ProviderError::MissingConf(
-            "apiKey".to_string(),
-            PROVIDER_NAME.to_string(),
-        ))?;
+        let api_key = api_conf
+            .api_key
+            .clone()
+            .ok_or(OpenWeatherError::MissingConf(
+                "apiKey".to_string(),
+                PROVIDER_NAME.to_string(),
+            ))?;
         let endpoints = Endpoints::try_from(api_conf)?;
         Ok(OpenWeatherMap {
             api_key,

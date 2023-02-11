@@ -3,24 +3,23 @@ mod commands;
 mod settings;
 mod user_output;
 
+use anyhow::Result;
 use args::{CliCommand, WeatherCliArgs};
 use clap::Parser;
 use config::Config;
 use settings::*;
-use user_output::{error_to_user_output, result_to_user_output};
-use weather_provider::ProviderManagerBuilder;
+use user_output::print;
+use weather_abstractions::ProviderManagerBuilder;
 
 #[tokio::main(flavor = "current_thread")]
-async fn main() {
+async fn main() -> Result<()> {
     let args = WeatherCliArgs::parse();
-    match handle(args).await {
-        Ok(result) => result_to_user_output(result),
-        Err(e) => error_to_user_output(e),
-    };
+    print(handle(args).await?);
+    Ok(())
 }
 use commands::WeatherCommandResult;
-use std::{error::Error, rc::Rc};
-async fn handle(args: WeatherCliArgs) -> Result<WeatherCommandResult, Box<dyn Error>> {
+use std::rc::Rc;
+async fn handle(args: WeatherCliArgs) -> Result<WeatherCommandResult, AppError> {
     let conf: Config = Settings::conf().await?;
     let conf = Rc::new(conf);
     let conf_ref1 = Rc::clone(&conf);
@@ -42,4 +41,16 @@ async fn handle(args: WeatherCliArgs) -> Result<WeatherCommandResult, Box<dyn Er
         CliCommand::Info => commands::info::execute(&mut provider_manger, &conf).await?,
     };
     Ok(res)
+}
+
+use thiserror::Error;
+/// This enum `AppError` defines all the errors that can occur when working with the application.
+#[derive(Error, Debug)]
+pub enum AppError {
+    #[error("Settings")]
+    Settings(#[from] SettingsError),
+    #[error("Provider manager")]
+    ProviderManager(#[from] weather_abstractions::Error),
+    #[error("Provider")]
+    Provider(#[from] anyhow::Error),
 }

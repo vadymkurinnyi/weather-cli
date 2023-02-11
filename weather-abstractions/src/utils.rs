@@ -83,7 +83,7 @@ where
 ///
 /// ```
 /// use reqwest::Url;
-/// use weather_provider::utils::build_endpoint;
+/// use weather_abstractions::utils::build_endpoint;
 ///
 /// let base = Url::parse("https://jsonplaceholder.typicode.com/").unwrap();
 /// let path = "todos/1";
@@ -103,7 +103,7 @@ pub fn build_endpoint(base: &Url, path: &str) -> Url {
 /// # Examples
 ///
 /// ```
-/// use weather_provider::utils::generate_functions;
+/// use weather_abstractions::utils::generate_functions;
 ///
 /// generate_functions!(
 ///     foo, "foo",

@@ -1,18 +1,21 @@
 pub mod api_config;
 pub mod builder;
-pub mod protocol;
+mod error;
+mod protocol;
 
 use std::error::Error;
 
 pub use api_config::PROVIDER_NAME;
 use chrono::NaiveDate;
+pub use error::WeatherApiError;
 use protocol::*;
-use weather_provider::*;
+use reqwest_middleware::ClientWithMiddleware;
+use weather_abstractions::*;
 
 pub struct WeatherApi {
     api_key: String,
     endpoints: Endpoints,
-    client: Client,
+    client: ClientWithMiddleware,
 }
 const MIN_FORECAS_DAYS: i64 = 1;
 const MAX_FORECAS_DAYS: i64 = 14;
@@ -26,7 +29,7 @@ impl WeatherProvider for WeatherApi {
         &self,
         address: &str,
         date: Option<chrono::NaiveDate>,
-    ) -> Result<Weather, Box<dyn Error>> {
+    ) -> Result<Weather, Box<dyn Error + Send + Sync + 'static>> {
         Ok(Self::get_weather(self, address, date).await?)
     }
 }
@@ -35,7 +38,7 @@ impl WeatherApi {
         &self,
         address: &str,
         date: Option<chrono::NaiveDate>,
-    ) -> Result<Weather, ProviderError> {
+    ) -> Result<Weather, WeatherApiError> {
         if let Some(date) = date {
             let today = chrono::offset::Utc::now().date_naive();
             let min_date = NaiveDate::from_ymd_opt(2010, 1, 1).expect("Date 2010-1-1 created");
@@ -45,12 +48,12 @@ impl WeatherApi {
                 MIN_FORECAS_DAYS..=MAX_FORECAS_DAYS => self.forecast(address, dif_days).await,
                 MIN_FUTURE_DAYS..=MAX_FUTURE_DAYS => self.future(address, date).await,
                 _ if date < today && date > min_date => self.history(address, date).await,
-                _ => Err(ProviderError::UnsupportedDate(date)),
+                _ => Err(WeatherApiError::UnsupportedDate(date)),
             };
         }
         self.current(address).await
     }
-    async fn current(&self, address: &str) -> Result<Weather, ProviderError> {
+    async fn current(&self, address: &str) -> Result<Weather, WeatherApiError> {
         let endpoint = self.endpoints.current.clone();
         let response = self
             .default_request_builder(&endpoint, address)
@@ -66,7 +69,7 @@ impl WeatherApi {
         &self,
         address: &str,
         date: chrono::NaiveDate,
-    ) -> Result<Weather, ProviderError> {
+    ) -> Result<Weather, WeatherApiError> {
         let endpoint = self.endpoints.history.clone();
         let dt = date.format("%Y-%m-%d").to_string();
         let response = self
@@ -75,16 +78,20 @@ impl WeatherApi {
             .send()
             .await?;
         let mut resp = parse::<HistoryResponse>(response).await?;
-        let forecast = resp.forecast.forecastday.pop().ok_or(ProviderError::JSON(
-            self.endpoints.history.path().to_string(),
-            "./forecast.forecastday".to_string(),
-        ))?;
+        let forecast = resp
+            .forecast
+            .forecastday
+            .pop()
+            .ok_or(WeatherApiError::JSON(
+                self.endpoints.history.path().to_string(),
+                "./forecast.forecastday".to_string(),
+            ))?;
         Ok(Weather::history(
             Temperature::from_c(forecast.day.avgtemp_c)?,
             forecast.day.condition.text,
         ))
     }
-    async fn forecast(&self, address: &str, day: i64) -> Result<Weather, ProviderError> {
+    async fn forecast(&self, address: &str, day: i64) -> Result<Weather, WeatherApiError> {
         let endpoint = self.endpoints.forecast.clone();
         let response = self
             .default_request_builder(&endpoint, address)
@@ -96,10 +103,14 @@ impl WeatherApi {
             .send()
             .await?;
         let mut resp = parse::<ForecastResponse>(response).await?;
-        let forecast = resp.forecast.forecastday.pop().ok_or(ProviderError::JSON(
-            endpoint.path().to_string(),
-            "./forecast.forecastday".to_string(),
-        ))?;
+        let forecast = resp
+            .forecast
+            .forecastday
+            .pop()
+            .ok_or(WeatherApiError::JSON(
+                endpoint.path().to_string(),
+                "./forecast.forecastday".to_string(),
+            ))?;
 
         Ok(Weather::forecast(
             Temperature::from_c(forecast.day.avgtemp_c)?,
@@ -107,7 +118,7 @@ impl WeatherApi {
         ))
     }
 
-    async fn future(&self, address: &str, date: NaiveDate) -> Result<Weather, ProviderError> {
+    async fn future(&self, address: &str, date: NaiveDate) -> Result<Weather, WeatherApiError> {
         let endpoint = self.endpoints.future.clone();
         let dt = date.format("%Y-%m-%d").to_string();
         let response = self
@@ -116,31 +127,41 @@ impl WeatherApi {
             .send()
             .await?;
         let mut resp = parse::<FutureResponse>(response).await?;
-        let forecast = resp.forecast.forecastday.pop().ok_or(ProviderError::JSON(
-            endpoint.path().to_string(),
-            "./forecast.forecastday".to_string(),
-        ))?;
+        let forecast = resp
+            .forecast
+            .forecastday
+            .pop()
+            .ok_or(WeatherApiError::JSON(
+                endpoint.path().to_string(),
+                "./forecast.forecastday".to_string(),
+            ))?;
         Ok(Weather::forecast(
             Temperature::from_c(forecast.day.avgtemp_c)?,
             forecast.day.condition.text,
         ))
     }
 
-    fn default_request_builder(&self, endpoint: &Url, address: &str) -> reqwest::RequestBuilder {
+    fn default_request_builder(
+        &self,
+        endpoint: &Url,
+        address: &str,
+    ) -> reqwest_middleware::RequestBuilder {
         self.client
             .get(endpoint.clone())
             .query(&[("q", address), ("key", self.api_key.as_str())])
     }
 }
 
-async fn parse<T: DeserializeOwned>(res: reqwest::Response) -> Result<T, ProviderError> {
-    let resp_or_error = crate::utils::parse::<T, ErrorResponse>(res).await?;
-    resp_or_error.map_err(|e| ProviderError::Api(e.error.message, e.error.code as u16))
+async fn parse<T: DeserializeOwned>(res: reqwest::Response) -> Result<T, WeatherApiError> {
+    let resp_or_error = crate::utils::parse::<T, ErrorResponse>(res)
+        .await
+        .map_err(reqwest_middleware::Error::Reqwest)?;
+    resp_or_error.map_err(|e| WeatherApiError::Api(e.error.message, e.error.code as u16))
 }
 
 use self::api_config::Endpoints;
 pub use builder::WeatherApiBuilder;
-use reqwest::{Client, Url};
+use reqwest::Url;
 use serde::de::DeserializeOwned;
 
 #[cfg(test)]
@@ -169,7 +190,7 @@ mod test {
             .get_weather("London", None)
             .await
             .expect_err("weather result should be err");
-        assert_error!(error, ProviderError::HttpClient(_));
+        assert_error!(error, WeatherApiError::HttpClient(_));
     }
 
     #[tokio::test]
@@ -188,7 +209,7 @@ mod test {
         let client = WeatherApiBuilder::build(&cfg).expect("WeatherApi created");
         let weather_result = client.get_weather("London", None).await;
         let error = weather_result.expect_err("weather result should be err");
-        assert_error!(error, ProviderError::Api(_, _));
+        assert_error!(error, WeatherApiError::Api(_, _));
     }
 
     use config::Config;
@@ -222,7 +243,7 @@ mod test {
             .get_weather("Lviv", date)
             .await
             .expect_err("Unsupported date");
-        assert_error!(err, ProviderError::UnsupportedDate(_))
+        assert_error!(err, WeatherApiError::UnsupportedDate(_))
     }
 
     #[rstest]

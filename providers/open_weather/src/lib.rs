@@ -1,4 +1,5 @@
 mod api_config;
+mod error;
 mod protocol;
 
 use std::error::Error;
@@ -6,9 +7,10 @@ use std::error::Error;
 use self::api_config::Endpoints;
 pub use api_config::PROVIDER_NAME;
 use chrono::{NaiveDate, NaiveDateTime};
+use error::OpenWeatherError;
 use protocol::*;
 use reqwest::{Client, Url};
-use weather_provider::*;
+use weather_abstractions::*;
 
 pub struct OpenWeatherMap {
     api_key: String,
@@ -26,7 +28,7 @@ impl WeatherProvider for OpenWeatherMap {
         &self,
         address: &str,
         date: Option<chrono::NaiveDate>,
-    ) -> Result<Weather, Box<dyn Error>> {
+    ) -> Result<Weather, Box<dyn Error + Send + Sync + 'static>> {
         Ok(Self::get_weather(self, address, date).await?)
     }
 }
@@ -35,7 +37,7 @@ impl OpenWeatherMap {
         &self,
         address: &str,
         date: Option<NaiveDate>,
-    ) -> Result<Weather, ProviderError> {
+    ) -> Result<Weather, OpenWeatherError> {
         if let Some(date) = date {
             let today = chrono::offset::Utc::now().date_naive();
             let min_date = NaiveDate::from_ymd_opt(1979, 1, 1).expect("Date 1979-1-1 created");
@@ -44,7 +46,7 @@ impl OpenWeatherMap {
             return match diff_days {
                 MIN_FORECAS_DAYS..=MAX_FORECAS_DAYS => self.forecast(address, date).await,
                 _ if date < today && date > min_date => self.history(address, date).await,
-                _ => Err(ProviderError::UnsupportedDate(date)),
+                _ => Err(OpenWeatherError::UnsupportedDate(date)),
             };
         }
         self.today(address).await
@@ -54,7 +56,7 @@ impl OpenWeatherMap {
             .get(endpoint.clone())
             .query(&[("q", address), ("appid", self.api_key.as_str())])
     }
-    async fn today(&self, address: &str) -> Result<Weather, ProviderError> {
+    async fn today(&self, address: &str) -> Result<Weather, OpenWeatherError> {
         let endpoint = self.endpoints.weather.clone();
 
         let response = self
@@ -73,7 +75,7 @@ impl OpenWeatherMap {
             weather.main,
         ))
     }
-    async fn history(&self, address: &str, date: NaiveDate) -> Result<Weather, ProviderError> {
+    async fn history(&self, address: &str, date: NaiveDate) -> Result<Weather, OpenWeatherError> {
         let ts = NaiveDateTime::new(date, chrono::NaiveTime::default()).timestamp();
         let endpoint = self.endpoints.history.clone();
         let response = self
@@ -94,7 +96,7 @@ impl OpenWeatherMap {
         let temp = Temperature::from_k(histroy.main.temp)?;
         Ok(Weather::history(temp, weather.main))
     }
-    async fn forecast(&self, address: &str, date: NaiveDate) -> Result<Weather, ProviderError> {
+    async fn forecast(&self, address: &str, date: NaiveDate) -> Result<Weather, OpenWeatherError> {
         let ts = NaiveDateTime::new(date, chrono::NaiveTime::default()).timestamp();
         let endpoint = self.endpoints.forecast.clone();
         let response = self
@@ -119,12 +121,12 @@ impl OpenWeatherMap {
     }
 }
 
-async fn parse<T: DeserializeOwned>(res: reqwest::Response) -> Result<T, ProviderError> {
+async fn parse<T: DeserializeOwned>(res: reqwest::Response) -> Result<T, OpenWeatherError> {
     let resp_or_error = crate::utils::parse::<T, ErrorResponse>(res).await?;
-    resp_or_error.map_err(|e| ProviderError::Api(e.message, e.cod as u16))
+    resp_or_error.map_err(|e| OpenWeatherError::Api(e.message, e.cod as u16))
 }
-fn json_error(endpoint: &Url, path: impl Into<String>) -> ProviderError {
-    ProviderError::JSON(endpoint.to_string(), path.into())
+fn json_error(endpoint: &Url, path: impl Into<String>) -> OpenWeatherError {
+    OpenWeatherError::Json(endpoint.to_string(), path.into())
 }
 
 #[cfg(test)]
@@ -225,7 +227,7 @@ mod tests {
             .get_weather("Ankara", date)
             .await
             .expect_err("Unsupported date");
-        assert_error!(err, ProviderError::UnsupportedDate(_))
+        assert_error!(err, OpenWeatherError::UnsupportedDate(_))
     }
 
     fn endpoint_from_config(config: &Config, name: &str) -> String {

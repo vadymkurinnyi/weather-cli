@@ -1,7 +1,9 @@
-use std::{collections::HashMap, error::Error};
+use std::collections::HashMap;
 
 use config::Config;
-use weather_provider::ProviderManager;
+use weather_abstractions::ProviderManager;
+
+use crate::settings::SettingsError;
 
 use super::WeatherCommandResult;
 
@@ -22,7 +24,7 @@ use super::WeatherCommandResult;
 pub async fn execute(
     provider_manger: &mut ProviderManager,
     cfg: &Config,
-) -> Result<WeatherCommandResult, Box<dyn Error>> {
+) -> Result<WeatherCommandResult, SettingsError> {
     let providers = provider_manger.get_list_providers();
 
     let mut settings = Vec::new();
@@ -36,7 +38,10 @@ pub async fn execute(
                     .and_modify(hide_sensetive);
                 Some(configuration)
             }
-            Err(_) => None,
+            Err(config::ConfigError::NotFound(_)) => None,
+            Err(e) => {
+                return Err(SettingsError::Configuration(e));
+            }
         };
 
         settings.push((p.to_string(), configuration));

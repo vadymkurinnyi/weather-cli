@@ -1,12 +1,10 @@
 mod builder;
-mod error;
 mod models;
 pub mod utils;
-use std::error::Error;
+use std::error::Error as StdError;
 
 pub use builder::*;
 use chrono::NaiveDate;
-pub use error::*;
 pub use models::*;
 
 use async_trait::async_trait;
@@ -27,5 +25,14 @@ pub trait WeatherProvider {
         &self,
         address: &str,
         date: Option<NaiveDate>,
-    ) -> Result<Weather, Box<dyn Error>>;
+    ) -> Result<Weather, Box<dyn StdError + Send + Sync + 'static>>;
+}
+
+use thiserror::Error;
+#[derive(Error, Debug)]
+pub enum Error {
+    #[error("Error while build provider {0}")]
+    Build(String, anyhow::Error),
+    #[error("Not spported provider {0}")]
+    NotSupport(String),
 }

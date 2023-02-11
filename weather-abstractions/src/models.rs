@@ -52,7 +52,7 @@ type TemperatureResult = Result<Temperature, TemperatureError>;
 
 impl Temperature {
     /// Creates a `Temperature` instance from a Celsius value.
-    /// 
+    ///
     /// Returns a `TemperatureError` if the temperature value is less than -273.15°C.
     pub fn from_c(celsius: f32) -> TemperatureResult {
         if celsius < -K_ZERO_C {
@@ -61,7 +61,7 @@ impl Temperature {
         Ok(Temperature::Celsius(celsius))
     }
     /// Creates a `Temperature` instance from a Fahrenheit value.
-    /// 
+    ///
     /// Returns a `TemperatureError` if the temperature value is less than -459.67°F.
     pub fn from_f(fahrenheit: f32) -> TemperatureResult {
         if fahrenheit < -K_ZERO_F {
@@ -70,7 +70,7 @@ impl Temperature {
         Ok(Temperature::Fahrenheit(fahrenheit))
     }
     /// Creates a `Temperature` instance from a Kelvin value.
-    /// 
+    ///
     /// Returns a `TemperatureError` if the temperature value is less than 0°K.
     pub fn from_k(kelvin: f32) -> TemperatureResult {
         if kelvin < 0.0 {
@@ -91,7 +91,7 @@ impl Temperature {
     /// # Examples
     ///
     /// ```
-    /// use weather_provider::{Temperature, Units};
+    /// use weather_abstractions::{Temperature, Units};
     ///
     /// let temperature = Temperature::Kelvin(273.15);
     /// let string_value = temperature.to_string_value(Units::Metric);
@@ -146,7 +146,7 @@ impl Weather {
     /// # Examples
     ///
     /// ```
-    /// use weather_provider::{Temperature, Units, Weather, WeatherKind};
+    /// use weather_abstractions::{Temperature, Units, Weather, WeatherKind};
     /// let temp = Temperature::from_c(22.0).unwrap();
     /// let weather = Weather::history(temp, "Sunny");
     /// assert_eq!(weather.kind, WeatherKind::History);
@@ -165,7 +165,7 @@ impl Weather {
     /// # Examples
     ///
     /// ```
-    /// use weather_provider::{Temperature, Units, Weather, WeatherKind};
+    /// use weather_abstractions::{Temperature, Units, Weather, WeatherKind};
     /// let temp = Temperature::from_c(22.0).unwrap();
     /// let weather = Weather::current(temp, "Sunny");
     /// assert_eq!(weather.kind, WeatherKind::Current);
@@ -184,7 +184,7 @@ impl Weather {
     /// # Examples
     ///
     /// ```
-    /// use weather_provider::{Temperature, Units, Weather, WeatherKind};
+    /// use weather_abstractions::{Temperature, Units, Weather, WeatherKind};
     /// let temp = Temperature::from_c(22.0).unwrap();
     /// let weather = Weather::forecast(temp, "Sunny");
     /// assert_eq!(weather.kind, WeatherKind::Forecast);

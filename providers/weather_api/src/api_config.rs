@@ -1,4 +1,4 @@
-use crate::{generate_functions, utils::build_endpoint, ProviderError};
+use crate::{generate_functions, utils::build_endpoint, WeatherApiError};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 
@@ -36,10 +36,10 @@ pub struct Endpoints {
 }
 
 impl TryFrom<ApiConfig> for Endpoints {
-    type Error = ProviderError;
+    type Error = WeatherApiError;
     fn try_from(value: ApiConfig) -> Result<Self, Self::Error> {
         let base_url = Url::parse(&value.base_url).map_err(|e| {
-            ProviderError::Parse(
+            WeatherApiError::Parse(
                 format!("{PROVIDER_NAME}/baseUrl"),
                 value.base_url.clone(),
                 e.to_string(),

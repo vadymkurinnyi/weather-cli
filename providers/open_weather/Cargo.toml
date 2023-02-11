@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-weather-provider = { path = "../../weather-provider" }
+weather-abstractions = { path = "../../weather-abstractions" }
 async-trait = "0.1.64"
 async-std = { version = "1.12.0", features = ["attributes"] }
 chrono = "0.4.23"

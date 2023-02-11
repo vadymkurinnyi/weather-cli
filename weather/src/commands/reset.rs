@@ -1,6 +1,4 @@
-use std::error::Error;
-
-use crate::settings::Settings;
+use crate::settings::{Settings, SettingsError};
 
 use super::WeatherCommandResult;
 
@@ -9,7 +7,7 @@ use super::WeatherCommandResult;
 /// # Errors
 ///
 /// Returns an error if there was an issue resetting the settings.
-pub async fn execute() -> Result<WeatherCommandResult, Box<dyn Error>> {
+pub async fn execute() -> Result<WeatherCommandResult, SettingsError> {
     Settings::reset().await?;
     Ok(WeatherCommandResult::Reseted)
 }

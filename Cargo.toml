@@ -1,3 +1,3 @@
 [workspace]
 
-members = ["weather", "weather-provider", "providers/*"]
+members = ["weather", "weather-abstractions", "providers/*"]

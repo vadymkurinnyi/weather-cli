@@ -1,8 +1,6 @@
-use std::error::Error;
-
 use super::WeatherCommandResult;
-use crate::{args::ConfigureArgs, Settings};
-use weather_provider::ProviderManager;
+use crate::{args::ConfigureArgs, AppError, Settings};
+use weather_abstractions::ProviderManager;
 
 /// Execute the configure command.
 ///
@@ -28,7 +26,7 @@ use weather_provider::ProviderManager;
 pub async fn execute(
     args: ConfigureArgs,
     provider_manger: &ProviderManager,
-) -> Result<WeatherCommandResult, Box<dyn Error>> {
+) -> Result<WeatherCommandResult, AppError> {
     provider_manger.is_supported(&args.provider)?;
     match args {
         ConfigureArgs {
