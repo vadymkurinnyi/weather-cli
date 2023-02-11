@@ -1,4 +1,6 @@
 # Weather CLI
+[![CodeFactor](https://www.codefactor.io/repository/github/vadymkurinnyi/weather-cli/badge)](https://www.codefactor.io/repository/github/vadymkurinnyi/weather-cli)
+
 A Command-Line Interface (CLI) tool for fetching weather information from various providers.
 ## Prerequisites
 To use this CLI, you need to have Rust installed on your system. You can install it from [here](https://www.rust-lang.org/tools/install).
